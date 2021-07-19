@@ -1,4 +1,8 @@
 # test-file
+```
+Vue cli生成的空白项目
+上传至github教程：https://www.cnblogs.com/cxk1995/p/5800196.html
+```
 
 ## Project setup
 ```
