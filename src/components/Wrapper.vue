@@ -4,41 +4,41 @@
                      <!--左侧-->
                 <div class="col col-l">
                     <div class="xpanel-wrapper xpanel-wrapper-40">
-                        <div class="xpanel xpanel-l-t" id="xpanel-l-t">
-                            <div class="title"></div>
+                        <div class="xpanel xpanel-l-t" id="BPS_Chart">
+                           
                         </div>
                     </div>
                     <div class="xpanel-wrapper xpanel-wrapper-60">
-                        <div class="xpanel xpanel-l-b" id="xpanel-l-b">
-                            <div class="title"></div>
+                        <div class="xpanel xpanel-l-b" id="CPU_Useage">
+                           
                         </div>
                     </div>
                 </div>
                  <!--中间-->
                 <div class="col col-c">
                     <div class="xpanel-wrapper xpanel-wrapper-75">
-                        <div class="xpanel no-bg" id ="xpanel no-bg">
+                        <div class="xpanel no-bg" id ="dynamic_Intranet">
                         </div>
                     </div>
                     <div class="xpanel-wrapper xpanel-wrapper-25">
-                        <div class="xpanel xpanel-c-b">
-                            <div class="title title-long"></div>
+                        <div class="xpanel xpanel-c-b" id="DiskMonitorData">
+                            
                         </div>
                     </div>
                 </div>
                  <!--右侧-->
                 <div class="col col-r">
                     <div class="xpanel-wrapper xpanel-wrapper-25">
-                        <div class="xpanel xpanel-r-t" id="xpanel xpanel-r-t">
+                        <div class="xpanel xpanel-r-t" id="IntranetBandwidth">
                         </div>
                     </div>
                     <div class="xpanel-wrapper xpanel-wrapper-30">
-                        <div class="xpanel xpanel-r-m">
-                            <div class="title"></div>
+                        <div class="xpanel xpanel-r-m" id="CashCoupon">
+                           
                         </div>
                     </div>
                     <div class="xpanel-wrapper xpanel-wrapper-45">
-                        <div class="xpanel xpanel-r-b" id="xpanel xpanel-r-b">
+                        <div class="xpanel xpanel-r-b" id="Month_Bill">
                         </div>
                     </div>
                 </div>
@@ -47,6 +47,7 @@
 </template>
 
 <script>
+
 export default {
 data() {
     return {
@@ -60,10 +61,17 @@ data() {
         BPSWrite:[],
         //云盘读取带宽
         BPSRead:[],
-        //间隔时间内发送数据流量/kbits
+        //间隔时间内网发送数据流量/kbits
         IntranetTX:[],
-        //间隔时间内接收数据流量/kbits
+        //间隔时间内网接收数据流量/kbits
         IntranetRX:[],
+        //内网带宽
+        IntranetBandwidth:[]
+        // //间隔时间公网发送数据流量/kbits
+        // InternetTX:[],
+        // //间隔时间公网接收数据流量/kbits
+        // InternetRX:[]
+
 
         }
     },
@@ -80,7 +88,8 @@ methods: {
             that.BPSWrite.push(element.BPSWrite)
             that.IntranetTX.push(element.IntranetTX)
             that.IntranetRX.push(element.IntranetRX)
-            });
+            that.IntranetBandwidth.push(element.IntranetBandwidth)
+        });
             (()=>{
                 //小数化简
             that.BPSRead.forEach((element,index)=>{
@@ -105,9 +114,7 @@ methods: {
         var requestOption = {
             method: 'GET'
         };
-        client.request('QueryCashCoupons', params, requestOption).then(res=>{
-            console.log(res)
-        })
+        client.request('QueryCashCoupons', params, requestOption)
         .catch((error)=>{
             error.toString().replace(regexp,function(){
                     that.axios.get(arguments[0])
@@ -119,8 +126,8 @@ methods: {
                 })
             })
     },
-    //查询实例账单
-    DescribeInstanceBill(BillingCycle){
+    //查询账单总览
+    QueryBillOverview(BillingCycle){
         const Core = require('@alicloud/pop-core');
         var that=this
         const regexp=/\bhttps.*?%3D\b/gm
@@ -136,36 +143,150 @@ methods: {
         var requestOption = {
             method: 'GET'
         };
-        client.request('DescribeInstanceBill', params, requestOption).then(res=>{
-            console.log(res)
-        })
+        //不需要.then,反正都会报错
+        client.request('QueryBillOverview', params, requestOption)
         .catch((error)=>{
             error.toString().replace(regexp,function(){
-                that.axios.get(arguments[0]).then((res)=>{
-                    let BillInfo=res.data.Data.Items
-                    console.log(BillInfo)
-                    let BillType=[]
-                    //存放重复的开销类型
-                    let temp=[]
-                    //let PretaxAmount=[]
-                    BillInfo.forEach(element=>{        
-                        console.log(element)
-                        //筛选消费类型
-                        if(BillType.indexOf(element.ProductDetail)==-1){
-                            BillType.push(element.ProductDetail)
-                        }else{
-                            temp.push(element.ProductDetail)
-                            temp=Array.from(new Set(temp))
-                        }
-                        // console.log(element.PretaxAmount)
+                that.axios.get(arguments[0]).then(res=>{
+                    res=res.data.Data
+                    // 用户名
+                    //let AccountName=res.AccountName
+                    // 账单详情
+                    let BillInfo=[]
+                    //开销类型
+                    let BillTypes=[]
+                    //应付金额
+                    let PretaxAmount=[]
+                    // 账单有效期
+                    BillingCycle=res.BillingCycle
+                    // 账单详情
+                    BillInfo=[res.Items]
+                    //console.log(BillInfo)
+                    //总开销
+                    let Total=0
+                    BillInfo.forEach(element=>{
+                        element.Item.forEach((element,index)=>{
+                            if(BillTypes.indexOf(element.ProductDetail)==-1){
+                                //处理账单类型
+                                BillTypes.push(element.ProductDetail)
+                                //没开销类型没重复，则将对应金额加入数组
+                                PretaxAmount.push(element.PretaxAmount)
+                                Total+=element.PretaxAmount
+                            }else{
+                                //console.log(index)
+                                //如果重复
+                                PretaxAmount[index-1]+=element.PretaxAmount
+                                Total+=element.PretaxAmount
+                            }
+                        })
                     })
-
-                    console.log(BillType)
-                    console.log(temp)
+                    that.DrawBill(BillingCycle,BillTypes,PretaxAmount,Total.toFixed(2))   
+                    //console.log(BillInfo)   
+                  
                 })
+
+                 
+                
             })
+            
         })
+        
     },
+    //开销图
+    DrawBill(BillingCycle,BillTypes,PretaxAmount,Total){
+        let chart=this.$echarts.init(document.getElementById("Month_Bill"))
+        var option={
+            title:{
+                text:'服务器月度开销状况',
+                subtext:'账单有效期: '+BillingCycle+'\n'
+                +'本月消费: '+Total,
+                left:'center'
+            },
+            tooltip:{
+                trigger:'axis',
+                axisPointer:{
+                    type:'shadow'
+                }
+                
+            },
+            //图例内容
+            legend:{
+                x:'left',
+                y:'bottom',
+                data:BillTypes
+            },
+
+            xAxis:[
+                {
+                type:'category',
+                data:[BillingCycle]
+                }
+            ],
+            yAxis:[{
+                type:"value"
+            }],
+            series:[
+                {
+                    name:BillTypes[0],
+                    type:'bar',
+                    barWidth:45,
+                    stack:'服务器开销',
+                    emphasis:{
+                        focus:'series'
+                    },
+                    data:[PretaxAmount[0]]
+                },
+                {
+                    name:BillTypes[1],
+                    type:'bar',
+                    stack:'服务器开销',
+                    emphasis:{
+                        focus:'series'
+                    },
+                    data:[PretaxAmount[1]]
+                },
+                {
+                    name:BillTypes[2],
+                    type:'bar',
+                    stack:'服务器开销',
+                    emphasis:{
+                        focus:'series'
+                    },
+                    data:[PretaxAmount[2]]
+                },
+                {
+                    name:BillTypes[3],
+                    type:'bar',
+                    stack:'服务器开销',
+                    emphasis:{
+                        focus:'series'
+                    },
+                    data:[PretaxAmount[3]]
+                },
+                {
+                    name:BillTypes[4],
+                    type:'bar',
+                    stack:'服务器开销',
+                    emphasis:{
+                        focus:'series'
+                    },
+                    data:[PretaxAmount[4]]
+                },
+                {
+                    name:BillTypes[5],
+                    type:'bar',
+                    stack:'服务器开销',
+                    emphasis:{
+                        focus:'series'
+                    },
+                    data:[PretaxAmount[5].toFixed(2)]
+                },
+
+            ]
+        }
+        chart.setOption(option)
+},
+    //获取实例数据
     DescribeEniMonitorData(StartTime,EndTime){
         var that=this
         const Core = require('@alicloud/pop-core');
@@ -187,21 +308,21 @@ methods: {
     var requestOption = {
         method: 'GET',
     }
-    client.request('DescribeInstanceMonitorData', params, requestOption).then(res=>{
-        console.log(res)
-    })
+    client.request('DescribeInstanceMonitorData', params, requestOption)
     .catch((error)=>{
         error.toString().replace(regexp,function(){
              that.axios.get(arguments[0])
              .then((res)=>{
                  //给data里的info赋值
                  that.info=res.data.MonitorData.InstanceMonitorData
+                 //console.log(that.info)
                  //处理数据
                  that.GetData()
                  //绘图
                  that.DrawBPS()
                  that.DrawCPU()
                  that.Draw_dynamic_Intranet()
+                 that.Draw_IntranetBandwidth()
                  })
             .catch(error=>{
                 console.log(error)
@@ -209,19 +330,46 @@ methods: {
             })
          })
     },
-
+    //内网带宽图
+    Draw_IntranetBandwidth(){
+        let chart=this.$echarts.init(document.getElementById('IntranetBandwidth'))
+        let option = {
+            title:{
+                text:'实例内网带宽'
+            },
+            tooltip: {
+                trigger: 'axis',
+                formatter: function (params) {
+                    return params[0].value+' Kb/s'
+                },
+            },
+            xAxis: {
+                type: 'category',
+                data:this.TimeStamp
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [{
+                data:this.IntranetBandwidth,
+                type: 'line'
+            }]
+        };
+        chart.setOption(option)
+    },
+    //流量动态图
     Draw_dynamic_Intranet(){
       let a=this.IntranetTX
       let b=this.IntranetRX
       let maxIntranetTX=Math.max.apply(null,a)
       let maxIntranetRX=Math.max.apply(null,b)
-      let mychart=this.$echarts.init(document.getElementById('xpanel no-bg'))
+      let mychart=this.$echarts.init(document.getElementById('dynamic_Intranet'))
       //let arr=new Array(10)
       let option={
         title: {
-        text: '动态数据流量I/O图',
-        subtext:'单位:Byte/s'
-        },
+            text: '公网数据流量I/O图',
+            subtext:'单位:Byte/s'
+            },
         tooltip: {
             trigger: 'axis',
             axisPointer: {
@@ -322,8 +470,9 @@ methods: {
       mychart.setOption(option)
 
     },
+    //CPU使用百分比
     DrawCPU(){
-          let chart=this.$echarts.init(document.getElementById("xpanel-l-b"))
+          let chart=this.$echarts.init(document.getElementById("CPU_Useage"))
           var option={
               title:{
                   text:'实例vCPU的使用比例',
@@ -332,7 +481,7 @@ methods: {
               tooltip: {
                 showDelay: 0,
                 formatter: function (params) {
-                    return params.value+ '%'
+                    return params.value+'%'
                 },
                 axisPointer: {
                     show: true,
@@ -346,9 +495,6 @@ methods: {
               xAxis:{
                   type:'category',
                   data:this.TimeStamp,
-                //   axisLabel :{
-                //       interval:5
-                //       }
               },
               yAxis:{
                   type:'value'
@@ -361,8 +507,9 @@ methods: {
           }
           chart.setOption(option)
       },
+      //云盘读写图
     DrawBPS(){
-        let chart=this.$echarts.init(document.getElementById("xpanel-l-t"))
+        let chart=this.$echarts.init(document.getElementById("BPS_Chart"))
         let option={
                 tooltip: {
                 // trigger: 'axis',
@@ -446,8 +593,9 @@ methods: {
           }
           chart.setOption(option)
         },
+    //代金券状况
     DrawCashCoupon(Used,Remain){
-            let chart=this.$echarts.init(document.getElementById("xpanel xpanel-r-t"))
+            let chart=this.$echarts.init(document.getElementById("CashCoupon"))
             let option={
                 title:{
                     text:"代金券使用情况",
@@ -464,108 +612,114 @@ methods: {
                             {value: Used, name: '已用金额'},
                             {value: Remain, name: '可用余额'}, 
                         ],
+                        itemStyle:{
+                            normal:{
+                                //直接显示数据
+                                label:{
+                                    show:true,
+                                    formatter:'{b}:{c}'
+                                },
+                                labelLine:{
+                                    show:true
+                                }
+                            }
+                        }
                     }
                 ]
         }
         chart.setOption(option)
     },
-    DrawBill(BillType){
-        let chart=this.$echarts.init(document.getElementById("xpanel xpanel-r-b"))
-        var option={
-            title:{
-                text:"服务器开销柱状图",
-                left:'center'
-            },
-            tooltip:{
-                trigger:'axis',
-                axisPointer:{
-                    type:'shadow'
-                }
-                
-            },
-            //图例内容
-            legend:{
-                x:'left',
-                y:'bottom',
-                data:BillType
-            },
-
-            xAxis:[
-                {
-                type:'category',
-                data:['2021-7']
-                }
-            ],
-            yAxis:[{
-                type:"value"
-            }],
-            series:[
-                {
-                    name:'云服务器ECS',
-                    type:'bar',
-                    barWidth:45,
-                    stack:'服务器开销',
-                    emphasis:{
-                        focus:'series'
-                    },
-                    data:[this.ecs_price]
-                },
-                {
-                    name:'关系型数据库',
-                    type:'bar',
-                    stack:'服务器开销',
-                    emphasis:{
-                        focus:'series'
-                    },
-                    data:[this.rds_price]
-                },
-                {
-                    name:'对象存储OSS',
-                    type:'bar',
-                    stack:'服务器开销',
-                    emphasis:{
-                        focus:'series'
-                    },
-                    data:[this.oss_price]
-                },
-                {
-                    name:'弹性公网IP',
-                    type:'bar',
-
-                    stack:'服务器开销',
-                    emphasis:{
-                        focus:'series'
-                    },
-                    data:[this.eip_price]
-                },
-                {
-                    name:'企业云监控',
-                    type:'bar',
-                    stack:'服务器开销',
-                    emphasis:{
-                        focus:'series'
-                    },
-                    data:[this.cms_price]
-                },
-                {
-                    name:'.net 英文域名',
-                    type:'bar',
-                    stack:'服务器开销',
-                    emphasis:{
-                        focus:'series'
-                    },
-                    data:[this.domain_price]
-                },
-
-            ]
+    //云盘情况
+    DescribeDiskMonitorData(DiskId,StartTime,EndTime){
+        const Core = require('@alicloud/pop-core');
+        var that=this
+        const regexp=/\bhttps.*?%3D\b/gm
+        var client = new Core({
+            accessKeyId: 'LTAI5tRbdWtxBecM2uCLMAnq',
+            accessKeySecret: 'jJOTr06fe6qGKoUG7qNLlKXnBo31zJ',
+            endpoint: 'https://ecs-cn-hangzhou.aliyuncs.com',
+            apiVersion: '2014-05-26'
+        });
+        var params = {
+            "DiskId": DiskId,
+            "StartTime": StartTime,
+            "EndTime": EndTime
         }
-        chart.setOption(option)
-    }
+        var requestOption = {
+            method: 'GET'
+        };
+        //时间戳
+        var TimeStamp=[]
+        //读取延迟
+        var LatencyRead=[]
+        //写入延迟
+        var LatencyWrite=[]
+        client.request('DescribeDiskMonitorData', params, requestOption)
+        .catch((error)=>{
+            error.toString().replace(regexp,function(){
+                    that.axios.get(arguments[0])
+                    .then((res)=>{
+                        res.data.MonitorData.DiskMonitorData.forEach(element=>{
+                            TimeStamp.push(element.TimeStamp)
+                            element.LatencyRead==undefined?LatencyRead.push(0):LatencyRead.push((element.LatencyRead/1000))
+                            element.LatencyWrite==undefined?LatencyWrite.push(0):LatencyWrite.push((element.LatencyWrite/1000))
+                        })
+                    })
+                })
+                  
+            })
+        this.DrawDescribeDiskMonitorData(LatencyRead,TimeStamp)  
+    },
+    //磁盘读取延时仪表盘
+    DrawDescribeDiskMonitorData(LatencyRead,TimeStamp){
+        let chart=this.$echarts.init(document.getElementById("DiskMonitorData"))
+        let regexp=/(?<=T).*?(?=Z)/gm
+        // let Timearr=[]
+        // let LatencyReadarr=[]
+        let length=TimeStamp.length
+        setInterval(()=>{
+            let option={
+                title:{
+                    text:'磁盘读取延时',
+                    subtext:TimeStamp[length].match(regexp)
+                },
+                series: [{
+                    name: '内网磁盘读取',
+                    type: 'gauge',
+                    progress: {
+                        show: true
+                    },
+                    detail: {
+                        valueAnimation: true,
+                        formatter: '{value}',
+                        textSryle:{
+                            fontSize:5
+                        }
+                    },
+                    data: [{
+                        value:LatencyRead[length],
+                       
+                    }],
+                    //仪表盘最大值
+                    max:3
+                }]
+            }
+            length++
+           //console.log(TimeStamp[length])
+            chart.setOption(option)
+
+        },3000)
+        
+        
+    },
+
 },
     mounted() {
-        this.DescribeEniMonitorData("2021-08-04T15:00:00Z","2021-08-04T16:00:00Z")
+        this.DescribeEniMonitorData("2021-08-06T14:00:00Z","2021-08-06T15:00:00Z")
         this.QueryCashCoupons()
-        this.DescribeInstanceBill("2021-08")
+        this.QueryBillOverview("2021-08")
+        this.DescribeDiskMonitorData("d-bp1g9rukkdasz8yr33lc","2021-08-07T11:00:00Z","2021-08-07T12:00:00Z")
+
         //var info=that.info
         //console.log(this.DescribeEniMonitorData("2021-08-04T15:00:00Z","2021-08-04T16:00:00Z"))
         //console.log(info)
@@ -662,16 +816,5 @@ methods: {
     .xpanel-r-t {background-image:url("../assets//img/panel-r-t.png");}
     .xpanel-r-m {background-image:url("../assets///img/panel-r-m.png");}
     .xpanel-r-b {background-image:url("../assets///img/panel-r-b.png");}
-    .xpanel .title {
-        padding-left:24px;
-        height:44px;
-        line-height:44px;
-        font-size:24px;
-        font-weight:normal;
-        color:#fff;
-        background-image:url("../assets//img/title-bg.png");
-        background-repeat:no-repeat;
-        background-size:100% 100%;
-    }
-    .xpanel .title-long {background-image:url("../assets/img/title-bg-long.png");}
+
 </style>
