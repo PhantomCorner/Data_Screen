@@ -1,4 +1,4 @@
-<template lang="zh">
+<template>
     <div class="Header">
         <h1 class="Header-title">Test</h1>
     </div>

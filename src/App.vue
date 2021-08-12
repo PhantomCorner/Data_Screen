@@ -4,7 +4,6 @@
     <Wrapper></Wrapper>
   </div>
 </template>
-
 <script>
 //import HelloWorld from './components/HelloWorld.vue'
 import Header from '@/components/Header'
@@ -13,19 +12,16 @@ export default {
   name: 'App',
   components: {
     Header,
-    Wrapper
+    Wrapper,
   }
 }
 </script>
-
 <style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /*text-align: center;*/
-  color: #2c3e50;
+  color: #b3ccf8;
 }
-
-
 </style>

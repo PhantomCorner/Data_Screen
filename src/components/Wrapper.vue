@@ -1,49 +1,46 @@
 <template lang="zh">
     <div class="wrapper">
-            <div class="content">
-                     <!--左侧-->
-                <div class="col col-l">
-                    <div class="xpanel-wrapper xpanel-wrapper-40">
-                        <div class="xpanel xpanel-l-t" id="BPS_Chart">
-                           
-                        </div>
-                    </div>
-                    <div class="xpanel-wrapper xpanel-wrapper-60">
-                        <div class="xpanel xpanel-l-b" id="CPU_Useage">
-                           
-                        </div>
-                    </div>
-                </div>
-                 <!--中间-->
-                <div class="col col-c">
-                    <div class="xpanel-wrapper xpanel-wrapper-75">
-                        <div class="xpanel no-bg" id ="dynamic_Intranet">
-                        </div>
-                    </div>
-                    <div class="xpanel-wrapper xpanel-wrapper-25">
-                        <div class="xpanel xpanel-c-b" id="DiskMonitorData">
-                            
-                        </div>
-                    </div>
-                </div>
-                 <!--右侧-->
-                <div class="col col-r">
-                    <div class="xpanel-wrapper xpanel-wrapper-25">
-                        <div class="xpanel xpanel-r-t" id="IntranetBandwidth">
-                        </div>
-                    </div>
-                    <div class="xpanel-wrapper xpanel-wrapper-30">
-                        <div class="xpanel xpanel-r-m" id="CashCoupon">
-                           
-                        </div>
-                    </div>
-                    <div class="xpanel-wrapper xpanel-wrapper-45">
-                        <div class="xpanel xpanel-r-b" id="Month_Bill">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+			<div class="container-fluid">
+				<div class="row fill-h">
+					<div class="col-lg-3 fill-h">
+						<div class="xpanel-wrapper xpanel-wrapper-2">
+							<div class="xpanel">
+								<div class="fill-h" id="flyMap"></div>
+							</div>
+						</div>
+						<div class="xpanel-wrapper xpanel-wrapper-2">
+							<div class="xpanel">
+								<div class="fill-h" id="worldMap"></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-6 fill-h">
+						<div class="xpanel-wrapper xpanel-wrapper-1">
+							<div class="xpanel">
+								<div class="fill-h" id="scatterMap"></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-3 fill-h">
+						<div class="xpanel-wrapper xpanel-wrapper-3">
+							<div class="xpanel">
+								<div class="fill-h" id="provinceMap"></div>
+							</div>
+						</div>
+						<div class="xpanel-wrapper xpanel-wrapper-3">
+							<div class="xpanel">
+								<div class="fill-h" id="cityMap"></div>
+							</div>
+						</div>
+						<div class="xpanel-wrapper xpanel-wrapper-3">
+							<div class="xpanel">
+								<div class="fill-h" id="countyMap"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 </template>
 
 <script>
@@ -54,6 +51,7 @@ data() {
         info:[],
         //云盘读写带宽汇总
         BPS_Read_Write:[],
+        //时间戳
         TimeStamp:[],
         //CPU占用率
         CPU:[],
@@ -71,11 +69,54 @@ data() {
         // InternetTX:[],
         // //间隔时间公网接收数据流量/kbits
         // InternetRX:[]
-
-
         }
     },
 methods: {
+    //获取实例数据
+    DescribeEniMonitorData(StartTime,EndTime){
+        var that=this
+        const Core = require('@alicloud/pop-core');
+        const regexp=/\bhttps.*?%3D\b/gm
+        var client = new Core({
+            //access info
+            accessKeyId: 'LTAI5tRbdWtxBecM2uCLMAnq',
+            accessKeySecret: 'jJOTr06fe6qGKoUG7qNLlKXnBo31zJ',
+            endpoint: 'https://ecs-cn-hangzhou.aliyuncs.com',
+            apiVersion: '2014-05-26'
+            });
+        var params = {
+            //实例ID
+            "InstanceId": "i-j6cg9rukkdaswo89jsou",
+            "StartTime": StartTime,
+            "EndTime": EndTime,
+            "Period":3600
+            }
+    //request type
+    var requestOption = {
+        method: 'GET',
+    }
+    client.request('DescribeInstanceMonitorData', params, requestOption)
+    .catch((error)=>{
+        error.toString().replace(regexp,function(){
+             that.axios.get(arguments[0])
+             .then((res)=>{
+                 //给data里的info赋值
+                 that.info=res.data.MonitorData.InstanceMonitorData
+                 //console.log(that.info)
+                 //处理数据
+                 that.GetData()
+                 //绘图
+                 //that.DrawBPS()
+                 that.DrawCPU()
+                 that.Draw_dynamic_Intranet()
+                 //that.Draw_IntranetBandwidth()
+                 })
+            .catch(error=>{
+                console.log(error)
+                })
+            })
+         })
+    },
     //处理数据
     GetData(){
         var that =this
@@ -86,8 +127,8 @@ methods: {
             that.CPU.push(element.CPU)
             that.BPSRead.push(element.BPSRead)
             that.BPSWrite.push(element.BPSWrite)
-            that.IntranetTX.push(element.IntranetTX)
-            that.IntranetRX.push(element.IntranetRX)
+            that.IntranetTX.push((element.IntranetTX/8000).toFixed(2))
+            that.IntranetRX.push((element.IntranetRX/8000).toFixed(2))
             that.IntranetBandwidth.push(element.IntranetBandwidth)
         });
             (()=>{
@@ -181,15 +222,10 @@ methods: {
                         })
                     })
                     that.DrawBill(BillingCycle,BillTypes,PretaxAmount,Total.toFixed(2))   
-                    //console.log(BillInfo)   
-                  
                 })
-
-                 
-                
             })
             
-        })
+        })  
         
     },
     //开销图
@@ -197,10 +233,13 @@ methods: {
         let chart=this.$echarts.init(document.getElementById("Month_Bill"))
         var option={
             title:{
-                text:'服务器月度开销状况',
+                text:'阿里云:当前服务器开销',
                 subtext:'账单有效期: '+BillingCycle+'\n'
                 +'本月消费: '+Total,
-                left:'center'
+                left:'center',
+                textStyle:{
+                    Color:'#b3ccf8'
+                }   
             },
             tooltip:{
                 trigger:'axis',
@@ -286,50 +325,7 @@ methods: {
         }
         chart.setOption(option)
 },
-    //获取实例数据
-    DescribeEniMonitorData(StartTime,EndTime){
-        var that=this
-        const Core = require('@alicloud/pop-core');
-        const regexp=/\bhttps.*?%3D\b/gm
-        var client = new Core({
-            //access info
-            accessKeyId: 'LTAI5tRbdWtxBecM2uCLMAnq',
-            accessKeySecret: 'jJOTr06fe6qGKoUG7qNLlKXnBo31zJ',
-            endpoint: 'https://ecs-cn-hangzhou.aliyuncs.com',
-            apiVersion: '2014-05-26'
-            });
-        var params = {
-            //实例ID
-            "InstanceId": "i-j6cg9rukkdaswo89jsou",
-            "StartTime": StartTime,
-            "EndTime": EndTime
-            }
-    //request type
-    var requestOption = {
-        method: 'GET',
-    }
-    client.request('DescribeInstanceMonitorData', params, requestOption)
-    .catch((error)=>{
-        error.toString().replace(regexp,function(){
-             that.axios.get(arguments[0])
-             .then((res)=>{
-                 //给data里的info赋值
-                 that.info=res.data.MonitorData.InstanceMonitorData
-                 //console.log(that.info)
-                 //处理数据
-                 that.GetData()
-                 //绘图
-                 that.DrawBPS()
-                 that.DrawCPU()
-                 that.Draw_dynamic_Intranet()
-                 that.Draw_IntranetBandwidth()
-                 })
-            .catch(error=>{
-                console.log(error)
-                })
-            })
-         })
-    },
+
     //内网带宽图
     Draw_IntranetBandwidth(){
         let chart=this.$echarts.init(document.getElementById('IntranetBandwidth'))
@@ -359,23 +355,25 @@ methods: {
     },
     //流量动态图
     Draw_dynamic_Intranet(){
-      let a=this.IntranetTX
-      let b=this.IntranetRX
-      let maxIntranetTX=Math.max.apply(null,a)
-      let maxIntranetRX=Math.max.apply(null,b)
+    //   let a=this.IntranetTX
+    //   let b=this.IntranetRX
+    //   let maxIntranetTX=Math.max.apply(null,a)/128
+    //   let maxIntranetRX=Math.max.apply(null,b)/128
       let mychart=this.$echarts.init(document.getElementById('dynamic_Intranet'))
       //let arr=new Array(10)
       let option={
         title: {
-            text: '公网数据流量I/O图',
-            subtext:'单位:Byte/s'
+            text: '内网数据流量I/O图',
             },
         tooltip: {
             trigger: 'axis',
             axisPointer: {
                 type: 'cross',
                 label: {
-                    backgroundColor: '#283b56'
+                    backgroundColor: '#283b56',
+                    // formatter:function(res){
+                    //     console.log(res.value)
+                    // }
                 }
             },
         },
@@ -392,7 +390,7 @@ methods: {
                 type: 'category',
                 boundaryGap: true,
                 //data:this.TimeStamp
-              data:(()=>{
+                data:(()=>{
                 //var now =this.TimeStamp[index]
                 //console.log(now)
                 var res = [];
@@ -400,7 +398,6 @@ methods: {
                 var len = 10;
                 var i=0
                 while (len--) {
-                  
                     res.push(this.TimeStamp[i])
                     i++
                 }
@@ -413,20 +410,17 @@ methods: {
             {
                 type: 'value',
                 scale: true,
-                name: '发送数据流量',
-                max: maxIntranetRX,
+                //max: maxIntranetRX,
                 min: 0,
                 boundaryGap: [0.2, 0.2]
             },
             {
                 type: 'value',
                 scale: true,
-                name: '接受数据流量',
-                max: maxIntranetTX,
+               // max: maxIntranetTX,
                 min: 0,
                 boundaryGap: [0.2, 0.2]
             }
-
         ],
         //数据
         series: [
@@ -444,28 +438,28 @@ methods: {
             }]
           }
           //起始下标
-      let index=10;
-    var timer=setInterval(()=>{
-          var axisData = this.TimeStamp[index][0]
-          index++
-          //console.log(axisData)
-          var data0 = option.series[0].data;
-          var data1 = option.series[1].data;
-          data0.shift();
-          data0.push(this.IntranetTX[index]);
-          data1.shift();
-          data1.push(this.IntranetRX[index]);
-          option.xAxis[0].data.shift();
-          option.xAxis[0].data.push(axisData);
-          //如果下标超过返回的时间戳数组长度
-          if(index>=this.TimeStamp.length){
-            //重置下标
-            // index=0
-            // console.log(index)
-            window.clearInterval(timer)
-            }
-          mychart.setOption(option);
-          }, 1200)
+      //let index=10;
+    // var timer=setInterval(()=>{
+    //       var axisData = this.TimeStamp[index][0]
+    //       index++
+    //       //console.log(axisData)
+    //       var data0 = option.series[0].data;
+    //       var data1 = option.series[1].data;
+    //       data0.shift();
+    //       data0.push(this.IntranetTX[index]);
+    //       data1.shift();
+    //       data1.push(this.IntranetRX[index]);
+    //       option.xAxis[0].data.shift();
+    //       option.xAxis[0].data.push(axisData);
+    //       //如果下标超过返回的时间戳数组长度
+    //       if(index>=this.TimeStamp.length){
+    //         //重置下标
+    //         // index=0
+    //         // console.log(index)
+    //         window.clearInterval(timer)
+    //         }
+    //       mychart.setOption(option);
+    //       }, 1200)
 
       mychart.setOption(option)
 
@@ -508,97 +502,97 @@ methods: {
           chart.setOption(option)
       },
       //云盘读写图
-    DrawBPS(){
-        let chart=this.$echarts.init(document.getElementById("BPS_Chart"))
-        let option={
-                tooltip: {
-                // trigger: 'axis',
-                showDelay: 0,
-                formatter: function (params) {
-                    if (params.value.length > 1) {
-                        return params.seriesName + '<br/>读取 '
-                        + params.value[0] + 'Kb/s '+'<br/>写入 '
-                        + params.value[1] + 'Kb/s ';
-                    }
-                    else {
-                        return params.seriesName + ':<br/>'
-                        + params.name + ' : '
-                        + params.value + 'Kb/s ';
-                    }
-                },
-                axisPointer: {
-                    show: true,
-                    type: 'cross',
-                    lineStyle: {
-                        type: 'dashed',
-                        width: 1
-                    }
-                }
-            },
-            legend: {
-                data: ['单次云盘读写'],
-                left: 'center',
-                bottom: 10
-            },
-            xAxis: [
-                {
-                    type: 'value',
-                    name:'写入',
-                    scale: true,
-                    axisLabel: {
-                        formatter: '{value} Kb/s'
-                    },
-                    splitLine: {
-                        show: false
-                    }
-                }
-            ],
-            yAxis: [
-                {
-                    type: 'value',
-                    name:'读取',
-                    scale: true,
-                    axisLabel: {
-                        formatter: '{value} Kb/s'
-                    },
-                    splitLine: {
-                        show: false
-                    }
-                }
-            ],
-            series: [
-                {
-                    name: '单次云盘读写',
-                    type: 'scatter',
-                    emphasis: {
-                        focus: 'series'
-                    },
-                    data:this.BPS_Read_Write,
-                    markArea: {
-                        silent: true,
-                        itemStyle: {
-                            color: 'transparent',
-                            borderWidth: 1,
-                            borderType: 'dashed'
-                        },
-                    },
-                    markPoint: {
-                        data: [
-                            {type: 'max', name: '最大写入值'},
-                            {type: 'min', name: '最小写入值'}
-                        ]
-                    },
-                }
-            ]
-          }
-          chart.setOption(option)
-        },
+    // DrawBPS(){
+    //     let chart=this.$echarts.init(document.getElementById("BPS_Chart"))
+    //     let option={
+    //             tooltip: {
+    //             // trigger: 'axis',
+    //             showDelay: 0,
+    //             formatter: function (params) {
+    //                 if (params.value.length > 1) {
+    //                     return params.seriesName + '<br/>读取 '
+    //                     + params.value[0] + 'Kb/s '+'<br/>写入 '
+    //                     + params.value[1] + 'Kb/s ';
+    //                 }
+    //                 else {
+    //                     return params.seriesName + ':<br/>'
+    //                     + params.name + ' : '
+    //                     + params.value + 'Kb/s ';
+    //                 }
+    //             },
+    //             axisPointer: {
+    //                 show: true,
+    //                 type: 'cross',
+    //                 lineStyle: {
+    //                     type: 'dashed',
+    //                     width: 1
+    //                 }
+    //             }
+    //         },
+    //         legend: {
+    //             data: ['单次云盘读写'],
+    //             left: 'center',
+    //             bottom: 10
+    //         },
+    //         xAxis: [
+    //             {
+    //                 type: 'value',
+    //                 name:'写入',
+    //                 scale: true,
+    //                 axisLabel: {
+    //                     formatter: '{value} Kb/s'
+    //                 },
+    //                 splitLine: {
+    //                     show: false
+    //                 }
+    //             }
+    //         ],
+    //         yAxis: [
+    //             {
+    //                 type: 'value',
+    //                 name:'读取',
+    //                 scale: true,
+    //                 axisLabel: {
+    //                     formatter: '{value} Kb/s'
+    //                 },
+    //                 splitLine: {
+    //                     show: false
+    //                 }
+    //             }
+    //         ],
+    //         series: [
+    //             {
+    //                 name: '单次云盘读写',
+    //                 type: 'scatter',
+    //                 emphasis: {
+    //                     focus: 'series'
+    //                 },
+    //                 data:this.BPS_Read_Write,
+    //                 markArea: {
+    //                     silent: true,
+    //                     itemStyle: {
+    //                         color: 'transparent',
+    //                         borderWidth: 1,
+    //                         borderType: 'dashed'
+    //                     },
+    //                 },
+    //                 markPoint: {
+    //                     data: [
+    //                         {type: 'max', name: '最大写入值'},
+    //                         {type: 'min', name: '最小写入值'}
+    //                     ]
+    //                 },
+    //             }
+    //         ]
+    //       }
+    //       chart.setOption(option)
+    //     },
     //代金券状况
     DrawCashCoupon(Used,Remain){
             let chart=this.$echarts.init(document.getElementById("CashCoupon"))
             let option={
                 title:{
-                    text:"代金券使用情况",
+                    text:"阿里云:代金券使用情况",
                     left:'center'
                 },
                 tooltip: {
@@ -666,9 +660,8 @@ methods: {
                         })
                     })
                 })
-                  
             })
-        this.DrawDescribeDiskMonitorData(LatencyRead,TimeStamp)  
+        //this.DrawDescribeDiskMonitorData(LatencyRead,TimeStamp)  
     },
     //磁盘读取延时仪表盘
     DrawDescribeDiskMonitorData(LatencyRead,TimeStamp){
@@ -707,114 +700,273 @@ methods: {
             length++
            //console.log(TimeStamp[length])
             chart.setOption(option)
-
-        },3000)
-        
-        
+        },3000)       
     },
+    ListCustomerselfResourceRecordDetails(){
+            var that=this
+            var enterprise_project_name=['算法','测试']
+            var consume_amount=[4004,45.62]
+            //请求localhost调用API
+            // that.axios.get('http://localhost:1234/api?res-records').then(function(res){
+            //     res.data.monthly_records.forEach(element=>{
+            //         //开销组去重
+            //         if(enterprise_project_name.indexOf(element.enterprise_project_name)==-1){
+            //             enterprise_project_name.push(element.enterprise_project_name)
+            //             //开销
+            //             consume_amount.push(element.consume_amount)
+            //         }else{
+            //             //如果开销组重复出现，开销叠加
+            //             consume_amount[enterprise_project_name.indexOf(element.enterprise_project_name)]+=element.consume_amount
+            //         }
+            //     })
+            // })
+            enterprise_project_name.splice()
+            that.DrawListCustomerselfResourceRecordDetails(enterprise_project_name,consume_amount)
+            // console.log(enterprise_project_name)
+            // console.log(consume_amount)
+        },
+        //绘制资源详单
+        DrawListCustomerselfResourceRecordDetails(enterprise_project_name,consume_amount){
+            console.log(enterprise_project_name,consume_amount)
+            var chart=this.$echarts.init(document.getElementById('ListCustomerselfResourceRecordDetails'))
+            setTimeout(()=>{
+                    var options={
+                        title:{
+                            text:'华为云:各组当前开销'
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data:enterprise_project_name
+                        },
+                        yAxis: {
+                            type: 'value'
+                        },
+                        series: [{
+                            data: consume_amount,
+                            type: 'bar',
+                            itemStyle:{
+                                normal:{
+                                    label:{
+                                    show:true,
+                                    position:'top',
+                                    }
+                                }
+                            }
+                        }],
+            }
+            chart.setOption(options)
+            },1000)
+        },
+        //代金券
+        ListSubCustomerCoupons(){
+            var Used=0
+            var Remain=0
+            var that=this
+            that.axios.get('http://localhost:1234/api?coupons').then(function(res){
+                console.log(res.data.user_coupons[0].face_value)
+                Remain=res.data.user_coupons[0].balance
+                Used=(res.data.user_coupons[0].face_value-Remain).toFixed(2)
+                that.DrawListSubCustomerCoupons(Used,Remain)
+            })
+            //console.log(Total,Remain)
+            
+        },
+        DrawListSubCustomerCoupons(Used,Remain){
+            console.log(Used,Remain)
+            var chart=this.$echarts.init(document.getElementById('ListSubCustomerCoupons'))
+            setTimeout(()=>{
+                let option={
+                title:{
+                    text:"华为云:代金券使用情况",
+                    left:'center'
+                },
+                tooltip: {
+                trigger: 'item'
+                },
+                series: [
+                    {
+                        type: 'pie',
+                        radius: '50%',
+                        data: [
+                            {value: Used, name: '已用金额'},
+                            {value: Remain, name: '可用余额'}, 
+                        ],
+                        itemStyle:{
+                            normal:{
+                                //直接显示数据
+                                label:{
+                                    show:true,
+                                    formatter:'{b}:{c}'
+                                },
+                                labelLine:{
+                                    show:true
+                                }
+                            }
+                        }
+                    }
+                ]
+                }
+            chart.setOption(option)
+            },1000)
+        },
+
+        DrawTree(){
+             var chart=this.$echarts.init(document.getElementById('Tree'))
+             var option={
+                title:{
+                    text:'当前华为云账号构成'
+                },
+                series : [{
+                    name:'树图',
+                    type:'tree',
+                    orient: 'vertical',  // vertical horizontal
+                    rootLocation: {x: 100, y: '60%'}, // 根节点位置  {x: 'center',y: 10}
+                    nodePadding: 20,
+                    symbol: 'circle',
+                    symbolSize: 40,
+                    itemStyle: {
+                        normal: {
+                            label: {
+                                show: true,
+                                position: 'inside',
+                                textStyle: 
+                                    {
+                                    color: '#cc9999',
+                                    fontSize: 15,
+                                    fontWeight:  'bolder'
+                                    }
+                    },
+                    lineStyle: {
+                        color: '#000',
+                        width: 1,
+                        type: 'broken' // 'curve'|'broken'|'solid'|'dotted'|'dashed'
+                    }
+                },
+                emphasis: {
+                    label: {
+                        show: true
+                    }
+                }
+            },
+            data: [
+                {
+                    name: 'AD4 主账号',
+                    value: 6,
+                    symbolSize: [90, 70],
+                    
+                    itemStyle: {
+                        normal: {
+                            label: {
+                                show: false
+                            }
+                        }
+                    },
+                    children: [
+                        {
+                            name: '算法组',
+                            itemStyle: {
+                                normal: {
+                                    label: {
+                                        show: false
+                                    }
+                                }
+                            },
+                            symbolSize: [60, 60],
+                            },
+                            {
+                            name: '测试组',
+                            symbolSize: [60, 60],
+                            itemStyle: {
+                                normal: {
+                                    label: {
+                                        show: false
+                                        }    
+                                    }
+                                },
+                            },
+                        ]
+                    }]
+                }]
+             }
+             chart.setOption(option)
+        }
 
 },
     mounted() {
-        this.DescribeEniMonitorData("2021-08-06T14:00:00Z","2021-08-06T15:00:00Z")
+        //取样区间 10小时
+        this.DescribeEniMonitorData("2021-08-10T10:00:00Z","2021-08-10T20:00:00Z")
         this.QueryCashCoupons()
         this.QueryBillOverview("2021-08")
         this.DescribeDiskMonitorData("d-bp1g9rukkdasz8yr33lc","2021-08-07T11:00:00Z","2021-08-07T12:00:00Z")
-
-        //var info=that.info
-        //console.log(this.DescribeEniMonitorData("2021-08-04T15:00:00Z","2021-08-04T16:00:00Z"))
-        //console.log(info)
-        // //加密
-        // const CryptoJS = require("crypto-js");
-        // //uuid
-        // const uuid=require('node-uuid')
-        // //time
-        // const moment=require('moment')
-        // //解码
-        // const utf8 = require('nodejs-utf8');
-        // //正则
-        // //var regexp=/.....$/gm
-        // //当前时间戳
-        // var Timestamp=moment(new Date().getTime() - 3600 * 1000 * 8).format("YYYY-MM-DDTHH:mm:ss") + 'Z'
-        // //var Timestamp = utf8.encode(new Date().toISOString().replace(regexp,'Z'))
-        // //随机签名nonce
-        // var SignatureNonce=uuid.v1()
-        // var AccessKeyId= 'LTAI5tRbdWtxBecM2uCLMAnq'
-        // //用Secret加密
-        // var AccessKeySecret= 'jJOTr06fe6qGKoUG7qNLlKXnBo31zJ&'
-        // var stringtosign=`GET&%2F&AccessKeyId%3D${AccessKeyId}%26Action%3DDescribeInstanceMonitorData%26Format%3DXML%26SignatureMethod%3DHMAC-SHA1%26SignatureNonce%3D${SignatureNonce}%26SignatureVersion%3D1.0%26Timestamp%3D${Timestamp}%26Version%3D2014-05-26`
-
-        // var Signature = Base64.encode(CryptoJS.HmacSHA1(AccessKeySecret,utf8.encode(stringtosign)))
-        // Signature=Signature.replace(/\*/, '%2A').replace(/%7E/, '~')
-        // var pubString =`Format=xml&Version=2014-05-26&SignatureMethod=HMAC-SHA1&SignatureNonce=${SignatureNonce}&SignatureVersion=1.0&AccessKeyId=${AccessKeyId}&Signature=${Signature}&Timestamp=${Timestamp}`
-
-        // var url=`https://ecs.aliyuncs.com/?Action=DescribeInstanceMonitorData&EndTime=2021-08-03T15:00:00Z&InstanceId=i-j6cg9rukkdaswo89jsou&StartTime=2021-08-03T15:00:00Z&Period=3600&${pubString}`
-        // console.log(url,Timestamp)
+        this.ListCustomerselfResourceRecordDetails('2021-08')
+        this.ListSubCustomerCoupons()
+        this.DrawTree()
     },
 }
 
 </script>
 <style>
-    .wrapper {
-        position:absolute;
-        top:36px;
-        bottom:10px;
-        left:10px;
-        right:10px;
-        padding:10px 10px 0 10px;
-        min-height:500px;
-        /*background:url("../assets//img/wrapper-bg.png") no-repeat;*/
-        background-size:100% 100%;
-        box-sizing:border-box;
-    }
-    .content {
-        display:-webkit-flex;
-        display:-ms-flexbox;
-        display:flex;
-        padding:25px 15px;
-        height:100%;
-        min-height:100%;
-        box-sizing:border-box;
-    }
-    .col {margin:0 10px;height:100%;}
-    .col-l {-webkit-flex:2;-ms-flex:2;flex:2}
-    .col-c {-webkit-flex:3;-ms-flex:3;flex:3;}
-    .col-r {-webkit-flex:2;-ms-flex:2;flex:2;}
-    /* PC */
-    @media (max-width:1919px) {
-        .content {padding:0;}
-    }
-    /* Mobile */
-    @media (max-width:1279px) {
-        .content {
-            -webkit-flex-direction:column;
-            -ms-flex-direction:column;
-            flex-direction:column;
-        }
-        .col {margin:5px 0;}
-        .col-l, 
-        .col-c, 
-        .col-r {-webkit-flex:none;-ms-flex:none;flex:none;}
-    }
-    .xpanel-wrapper {padding-bottom:10px;box-sizing:border-box;}
-    .xpanel-wrapper {height:100%;}
-    .xpanel-wrapper-25 {height:25%;}
-    .xpanel-wrapper-30 {height:30%;}
-    .xpanel-wrapper-40 {height:40%;}
-    .xpanel-wrapper-45 {height:45%;}
-    .xpanel-wrapper-60 {height:60%;}
-    .xpanel-wrapper-75 {height:75%;}
-    .xpanel {
-        height:100%;
-        min-height:100px;
-        background-repeat:no-repeat;
-        background-size:100% 100%;
-        box-sizing:border-box;
-    }
-    .xpanel-l-t {background-image:url("../assets/img/panel-l-t.png");}
-    .xpanel-l-b {background-image:url("../assets//img/panel-l-b.png");}
-    .xpanel-c-b {background-image:url("../assets//img/panel-c-b.png");}
-    .xpanel-r-t {background-image:url("../assets//img/panel-r-t.png");}
-    .xpanel-r-m {background-image:url("../assets///img/panel-r-m.png");}
-    .xpanel-r-b {background-image:url("../assets///img/panel-r-b.png");}
+@charset "utf-8";
 
+/********** Global **********/
+/*
+ *常用背景色： #0b0f34 (6,64,102) (29,45,57) (7,33,58) (8,13,28) (15,43,36)
+ */
+html, body {
+	width:100%;
+	height:100%;
+	min-height:635px;
+	font-family:"microsoft yahei", arial, sans-serif;
+	background-color:#0f1c30;
+	background-repeat:no-repeat;
+	background-position:center;
+	background-size:100% 100%;
+	overflow-x:hidden;
+	overflow-y:auto;
+}
+body.bg01 {background-image:url("../assets/img/WrapperIMG/bg01.png");}
+body.bg02 {background-image:url("../assets/img/WrapperIMG/bg02.png");}
+body.bg03 {background-image:url("../assets/img/WrapperIMG/bg03.png");}
+body.bg04 {background-image:url("../assets/img/WrapperIMG/bg04.png");}
+.header {
+	margin:0 auto;
+	width:100%;
+	height:65px;
+	max-width:1920px;
+	background:url("../assets/img/WrapperIMG/header.png") center no-repeat;
+}
+.header h3 {
+	margin:0;
+	padding:0;
+	line-height:50px;
+	text-align:center;
+	font-size:24px;
+	color:#5dc2fe;
+}
+.wrapper {position:absolute;top:80px;bottom:0;left:0;right:0;min-height:555px;}
+.container-fluid {height:100%;min-height:100%;}
+.row {margin-left:-7px;margin-right:-8px;}
+.row>div {padding-left:7px;padding-right:8px;}
+.xpanel-wrapper {padding-bottom:15px;box-sizing:border-box;}
+.xpanel-wrapper-1 {height:100%;}
+.xpanel-wrapper-2 {height:50%;}
+.xpanel-wrapper-3 {height:33.33333%;}
+.xpanel {
+	padding:15px;
+	height:100%;
+	min-height:170px;
+	background:url("../assets/img/WrapperIMG/panel.png") center no-repeat;
+	background-size:100% 100%;
+	box-sizing:border-box;
+}
+
+/* tool */
+.fill-h {height:100%;min-height:100%;}
+.no-margin {margin:0 !important;}
+.no-padding {padding:0 !important;}
+
+/* scrollbar */
+::-webkit-scrollbar {width:0;height:0;}
+::-webkit-scrollbar-track {background-color:transparent;}
+::-webkit-scrollbar-thumb {border-radius:5px;background-color:rgba(0, 0, 0, 0.3);}
 </style>
