@@ -1,15 +1,40 @@
 <template>
   <div id="app">
-    <Header></Header>
-    <Wrapper></Wrapper>
+  <Wrapper></Wrapper>
+    <swiper ref="Swiper" :options="mySwiperOpt">
+      <swiper-slide>
+        
+      </swiper-slide>
+      <swiper-slide>
+        <Header></Header>
+      </swiper-slide>
+    </swiper>
   </div>
 </template>
 <script>
-//import HelloWorld from './components/HelloWorld.vue'
 import Header from '@/components/Header'
 import Wrapper from '@/components/Wrapper'
 export default {
   name: 'App',
+  data() {
+    return {
+        mySwiperOpt: {
+          pagination: {
+            el: '.swiper-pagination'
+          },
+          // Some Swiper option/callback...
+        }
+    }
+  },
+  computed:{
+    swiper() {
+        return this.$refs.Swiper.swiper
+      }
+  },
+  mounted() {
+      //console.log('Current Swiper instance object', this.swiper)
+      this.swiper.slideTo(1, 3000, false)
+    },
   components: {
     Header,
     Wrapper,
