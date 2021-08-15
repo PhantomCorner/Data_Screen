@@ -9,7 +9,7 @@
                                 <!--账号余额-->
 								<div class="fill-h" id="Account_Info">
                                     <img src="../assets/img/WrapperIMG/余额.png"><span>当前代金券余额: {{Account_Coupons_Remain}} 元</span><br/>
-                                    <img src="../assets/img/WrapperIMG/支出.png"><span>本月开销: {{Account_Bill}} 元</span>
+                                    <img src="../assets/img/WrapperIMG/支出.png"><span>本月开销: {{Account_Bill.toFixed(2)}} 元</span>
                                 </div>
 							</div>
 						</div>
@@ -45,7 +45,7 @@
 						</div>
 						<div class="xpanel-wrapper xpanel-wrapper-3">
 							<div class="xpanel">
-								<div class="fill-h" id="countyMap"></div>
+								<div class="fill-h" id="CPU_Useage"></div>
 							</div>
 						</div>
 					</div>
@@ -195,7 +195,7 @@ methods: {
                     label:{
                         normal:{
                                     show:true,
-                                    formatter:`${percent}`+'\n\n'+`${res.data.Disks.Disk[3].Size}`+'G / '+'12G',
+                                    formatter:'可用空间: '+`${percent}`+'\n\n'+`${res.data.Disks.Disk[3].Size}`+'G / '+'12G',
                                     textStyle:{
                                         fontSize: 18,
                                         color:'#b3ccf8'
@@ -205,8 +205,6 @@ methods: {
                                 },
 
                     },
-
-                    name: '访问来源',
                     type: 'pie',
                     radius: ['60%', '75%'],//这里是控制环形内半径和外半径
                     avoidLabelOverlap: false,
@@ -258,7 +256,6 @@ methods: {
                     color:'#b3ccf8'
                 }
             },
-
             xAxis:[
                 {
                 type:'category',
@@ -282,17 +279,23 @@ methods: {
                 trigger: 'item'
             },
             legend: {
-                orient: 'horizontal',
-                left: 'bottom',
+                //orient: 'vertical',
+                icon:'pin',
+                y:'bottom',
+                orient:'horizontal',
                 textStyle:{
                     color:'#b3ccf8'
                 },
             },
             series: [
                 {
-                    name: '访问来源',
+                    name: '开销类型',
                     type: 'pie',
-                    radius: '70%',
+                    radius: '65%',
+                    label:{
+                        show:false,
+                        position: 'inside',
+                    },
                     data: [
                         // {value: 1048, name: '搜索引擎'},
                         // {value: 735, name: '直接访问'},
@@ -329,7 +332,6 @@ methods: {
             optionPie.series[0].data.push(objPie)
             optionBar.series.push(objBar)
         });
-        console.log(optionPie)
         chartBar.setOption(optionBar)
         chartPie.setOption(optionPie)
 },
@@ -464,48 +466,90 @@ methods: {
     //         }
     //       mychart.setOption(option);
     //       }, 1200)
-
       mychart.setOption(option)
     },
     //CPU使用百分比
     DrawCPU(){
-          let chart=this.$echarts.init(document.getElementById("CPU_Useage"))
-          var option={
-              title:{
-                  text:'实例vCPU的使用比例',
-                  subtext:'单位:百分比（%）',
-                  textStyle:{
+        var that=this
+        let chart=this.$echarts.init(document.getElementById("CPU_Useage"))
+        that.axios.get('http://localhost:1234/Ali?CPU_Useage')
+        .then(res=>{
+            //let Useage=(res.data.MonitorData.InstanceMonitorData[0].CPU)
+            let option={
+                title:{
+                    text:'实例vCPU使用情况',
+                    textStyle:{
                         color:'#b3ccf8'
                     }
-              },
-              tooltip: {
-                showDelay: 0,
-                formatter: function (params) {
-                    return params.value+'%'
                 },
-                axisPointer: {
-                    show: true,
-                    type: 'line',
-                    lineStyle: {
-                        type: 'dashed',
-                        width: 1
-                    }
-                }
-            },
-              xAxis:{
-                  type:'category',
-                  data:this.TimeStamp,
-              },
-              yAxis:{
-                  type:'value'
-              },
-              series:[{
-                  data:this.CPU,
-                  type:'line',
-                  smooth:true
-              }]
-          }
-          chart.setOption(option)
+                series: [
+                    {
+                    label:{
+                        normal:{
+                                    show:true,
+                                    formatter:`${res.data.MonitorData.InstanceMonitorData[0].CPU}`+' %',
+                                    //formatter:'可用空间: '+`${percent}`+'\n\n'+`${res.data.Disks.Disk[3].Size}`+'G / '+'12G',
+                                    textStyle:{
+                                        fontSize: 18,
+                                        color:'#b3ccf8'
+                                    },
+                                    position: 'center',
+                                    labelLine:{show:true}
+                                },
+                    },
+                    type: 'pie',
+                    radius: ['60%', '75%'],//这里是控制环形内半径和外半径
+                    avoidLabelOverlap: false,
+                    hoverAnimation:false,//此处查了好久属性//控制鼠标放置在环上时候的交互
+                    data: [{
+                            value: res.data.MonitorData.InstanceMonitorData[0].CPU,  
+                        }, 
+                        {
+                            value: 100,
+                        }]
+                    },
+                ],
+            }
+            chart.setOption(option)
+            // var option={
+            //     title:{
+            //         text:'实例vCPU使用比例',
+            //         subtext:'单位:百分比（%）',
+            //         textStyle:{
+            //             color:'#b3ccf8'
+            //         }
+            //     },
+            //     tooltip: {
+            //     showDelay: 0,
+            //     formatter: function (params) {
+            //         return params.value+'%'
+            //     },
+            //     axisPointer: {
+            //         show: true,
+            //         type: 'line',
+            //         lineStyle: {
+            //             type: 'dashed',
+            //             width: 1
+            //         }
+            //     }
+            //     },
+            //     xAxis:{
+            //         type:'category',
+            //         data:this.TimeStamp,
+            //     },
+            //     yAxis:{
+            //         type:'value'
+            //     },
+            //     series:[{
+            //         data:this.CPU,
+            //         type:'line',
+            //         smooth:true
+            //     }]
+            // }
+        })
+       
+        
+        //chart.setOption(option)
       },
       //云盘读写图
     // DrawBPS(){
@@ -903,6 +947,8 @@ methods: {
         this.QueryCashCoupons()
         this.QueryBillOverview("2021-08")
         this.DrawDiskRemain()
+        setInterval(this.DrawCPU(),1000)
+        //this.DrawCPU()
         //this.DescribeDiskMonitorData("d-bp1g9rukkdasz8yr33lc","2021-08-07T11:00:00Z","2021-08-07T12:00:00Z")
         //this.ListCustomerselfResourceRecordDetails('2021-08')
         //this.ListSubCustomerCoupons()
